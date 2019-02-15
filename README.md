@@ -88,25 +88,7 @@ Start `docker-image-policy` and restart Docker daemon.
 
 ```sh
 $ docker-image-policy &
-$ curl localhost:5006/health
 $ service docker restart
 ```
 
 **Please consider using the systemd service file for running docker-image-policy**
-
-## API Endpoints
-
-Besides the plugin API for Docker a second API provided through *127.0.0.1:5006* (default) is available to monitor the plugin or check the current state.
-
-* `/health` -> Health check
-* `/config` -> Current config
-* `/version` -> Current version
-
-```
-$ curl localhost:5006/health
-HEALTHY
-```
-
-## Author
-
-* Simon Pirschel
