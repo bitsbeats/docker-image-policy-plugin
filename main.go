@@ -1,13 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
-	"net/http"
+	"fmt"
 	"os"
 	"regexp"
-	"fmt"
-	"encoding/json"
-	"bytes"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/authorization"
@@ -16,21 +14,21 @@ import (
 const (
 	defaultDockerHost = "unix:///var/run/docker.sock"
 	pluginSocket      = "/run/docker/plugins/docker-image-policy.sock"
-	defaultConfig  = "/etc/docker/docker-image-policy.json"
+	defaultConfig     = "/etc/docker/docker-image-policy.json"
 	defaultAddr       = "127.0.0.1:5006"
 )
 
 type Config struct {
-	Whitelist []string `json:"whitelist"`
-	Blacklist []string `json:"blacklist"`
-	DefaultAllow bool `json:"defaultAllow"`
+	Whitelist    []string `json:"whitelist"`
+	Blacklist    []string `json:"blacklist"`
+	DefaultAllow bool     `json:"defaultAllow"`
 }
 
 // Globals
 var (
-	version string
-	reWhitelist []*regexp.Regexp
-	reBlacklist []*regexp.Regexp
+	version       string
+	reWhitelist   []*regexp.Regexp
+	reBlacklist   []*regexp.Regexp
 	configuration Config
 )
 
@@ -79,25 +77,6 @@ func readConfig(configFile string) error {
 	return nil
 }
 
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "HEALTHY")
-}
-
-func versionHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, version)
-}
-
-func configHandler(w http.ResponseWriter, r *http.Request) {
-	b, err := json.Marshal(configuration)
-	if err != nil {
-		fmt.Fprint(w, err)
-	}
-
-	var out bytes.Buffer
-	json.Indent(&out, b, "", "    ")
-	out.WriteTo(w)
-}
-
 func main() {
 	logrus.SetLevel(logrus.InfoLevel)
 	flag.Parse()
@@ -121,18 +100,6 @@ func main() {
 	logrus.Infof("%d entries in whitelist.", len(reWhitelist))
 	logrus.Infof("%d entries in blacklist.", len(reBlacklist))
 	logrus.Infof("Default allow: %t", configuration.DefaultAllow)
-
-	// Add additional handlers
-	http.HandleFunc("/health", healthHandler)
-	http.HandleFunc("/config", configHandler)
-	http.HandleFunc("/version", versionHandler)
-
-	go func() {
-		logrus.Debugf("Server running on %s", *flAddr)
-		if err := http.ListenAndServe(*flAddr, nil); err != nil {
-			logrus.Fatal(err)
-		}
-	}()
 
 	plugin, err := newPlugin(*flDockerHost, *flCertPath, *flTLSVerify)
 	if err != nil {

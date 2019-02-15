@@ -1,0 +1,27 @@
+kind: pipeline
+name: default
+
+workspace:
+  base: /go/src
+
+steps:
+  - name: build
+    image: golang
+    commands:
+      - go get github.com/Sirupsen/logrus
+      - go get github.com/docker/go-plugins-helpers/authorization
+      - go get github.com/docker/docker/api
+      - go get github.com/docker/engine-api/client
+      - go build -o docker-image-policy -ldflags "-X main.version=${DRONE_TAG:-v0.0.0}" .
+      - strip docker-image-policy
+
+  - name: release
+    image: plugins/github-release
+    settings:
+      api_key:
+        from_secret: github
+      files: docker-image-policy
+    when:
+      event: tag
+      branch:
+        - master
