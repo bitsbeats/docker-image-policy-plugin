@@ -55,6 +55,7 @@ func (p *authPlugin) AuthZReq(req authorization.Request) authorization.Response 
 		if err != nil {
 			errMsg := fmt.Sprintf("Error while parsing request URI: %s", err)
 			logrus.Error(errMsg)
+			metricsChan <- map[string]uint{"docker_image_policy{state=\"uri_err\"}": 1}
 			return authorization.Response{Allow: false, Msg: errMsg}
 		}
 
@@ -62,6 +63,7 @@ func (p *authPlugin) AuthZReq(req authorization.Request) authorization.Response 
 		if err != nil {
 			errMsg := fmt.Sprintf("Error while parsing request query string: %s", err)
 			logrus.Error(errMsg)
+			metricsChan <- map[string]uint{"docker_image_policy{state=\"query_err\"}": 1}
 			return authorization.Response{Allow: false, Msg: errMsg}
 		}
 
@@ -77,6 +79,8 @@ func (p *authPlugin) AuthZReq(req authorization.Request) authorization.Response 
 
 		for _, v := range reWhitelist {
 			if v.Match(bImage) {
+				metricsChan <- map[string]uint{"docker_image_policy{state=\"whitelist\"}": 1}
+				metricsChan <- map[string]uint{"docker_image_policy{state=\"allow\"}": 1}
 				return authorization.Response{Allow: true}
 			}
 		}
@@ -84,21 +88,25 @@ func (p *authPlugin) AuthZReq(req authorization.Request) authorization.Response 
 		for _, v := range reBlacklist {
 			if v.Match(bImage) {
 				logrus.Infof("Image %s blocked, because blacklisted.", image)
+				metricsChan <- map[string]uint{"docker_image_policy{state=\"blacklist\"}": 1}
+				metricsChan <- map[string]uint{"docker_image_policy{state=\"block\"}": 1}
 				return authorization.Response{
 					Allow: false,
-					Msg: fmt.Sprintf("Image %s is blacklisted on this server.", image),
+					Msg:   fmt.Sprintf("Image %s is blacklisted on this server.", image),
 				}
 			}
 		}
 
 		if configuration.DefaultAllow == true {
+			metricsChan <- map[string]uint{"docker_image_policy{state=\"allow\"}": 1}
 			return authorization.Response{Allow: true}
 		}
 
 		logrus.Infof("Image %s blocked, because default is reject.", image)
+		metricsChan <- map[string]uint{"docker_image_policy{state=\"block\"}": 1}
 		return authorization.Response{
 			Allow: false,
-			Msg: fmt.Sprintf("Image %s is not allowed on this server.", image),
+			Msg:   fmt.Sprintf("Image %s is not allowed on this server.", image),
 		}
 	}
 

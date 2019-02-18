@@ -23,5 +23,3 @@ steps:
       files: docker-image-policy
     when:
       event: tag
-      branch:
-        - master
