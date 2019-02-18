@@ -12,14 +12,14 @@ steps:
       - go get github.com/docker/go-plugins-helpers/authorization
       - go get github.com/docker/docker/api
       - go get github.com/docker/engine-api/client
-      - go build -o docker-image-policy -ldflags "-X main.version=${DRONE_TAG:-v0.0.0}" .
-      - strip docker-image-policy
+      - go build -o docker-image-policy-linux-amd64 -ldflags "-X main.version=${DRONE_TAG:-v0.0.0}" .
+      - strip docker-image-policy-linux-amd64
 
   - name: release
     image: plugins/github-release
     settings:
       api_key:
         from_secret: github
-      files: docker-image-policy
+      files: docker-image-policy-linux-amd64
     when:
       event: tag
